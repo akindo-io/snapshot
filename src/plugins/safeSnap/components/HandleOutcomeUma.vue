@@ -1,5 +1,5 @@
 <script setup>
-import Plugin from '../index';
+import Plugin, {getContractTransactionData, InterfaceDecoder} from '../index';
 import networks from '@snapshot-labs/snapshot.js/src/networks.json';
 import { getInstance } from '@snapshot-labs/lock/plugins/vue3';
 import { sleep } from '@snapshot-labs/snapshot.js/src/utils';
@@ -59,12 +59,33 @@ function showProposeModal() {
 }
 
 const getTransactionsUma = () => {
-  return props.batches.map(batch => [
-    batch.transactions[0].to,
-    Number(batch.transactions[0].operation),
-    batch.transactions[0].value,
-    batch.transactions[0].data
-  ]);
+  return props.batches.map(batch => {
+    const transactionDecoder = new InterfaceDecoder(batch.transactions[0].abi);
+    const selectedMethod = transactionDecoder.getMethodFragment(batch.transactions[0].data);
+    const parameters = transactionDecoder.decodeFunction(
+        batch.transactions[0].data,
+        selectedMethod
+    );
+
+    for (let i = 0; i < parameters.length; i++) {
+      if (batch.transactions[0].injectVotes[i]) {
+        parameters[i] = '[' + Object.values(props.results.scores).join(', ') + ']';
+      }
+    }
+
+    const injectedData = getContractTransactionData(
+        batch.transactions[0].abi,
+        selectedMethod,
+        parameters
+    );
+
+    return [
+      batch.transactions[0].to,
+      Number(batch.transactions[0].operation),
+      batch.transactions[0].value,
+      injectedData
+    ]
+  });
 };
 
 const updateDetails = async () => {

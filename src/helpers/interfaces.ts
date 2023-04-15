@@ -218,6 +218,7 @@ export interface SafeTransaction {
   to: string;
   value: string;
   data: string;
+  injectVotes: Array<number>;
   operation: string;
   nonce: string;
 }

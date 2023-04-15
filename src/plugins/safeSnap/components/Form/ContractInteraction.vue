@@ -23,6 +23,7 @@ export default {
     let selectedMethod = undefined;
     let methods = [];
     let parameters = [];
+    let parameterInjectVotes = [];
 
     if (this.modelValue) {
       try {
@@ -30,12 +31,14 @@ export default {
           to: _to = '',
           abi: _abi = '',
           value: _value = '0',
+          injectVotes: _injectVotes = [],
           data
         } = this.modelValue;
 
         to = _to;
         abi = typeof _abi === 'object' ? JSON.stringify(_abi) : _abi;
         value = _value;
+        parameterInjectVotes = _injectVotes;
 
         const transactionDecoder = new InterfaceDecoder(abi);
         selectedMethod = transactionDecoder.getMethodFragment(data);
@@ -58,7 +61,8 @@ export default {
       methodIndex: 0,
       selectedMethod,
       methods,
-      parameters
+      parameters,
+      parameterInjectVotes
     };
   },
   watch: {
@@ -77,27 +81,31 @@ export default {
     parameters() {
       this.updateTransaction();
     },
+    parameterInjectVotes () {
+      this.updateTransaction();
+    },
     nonce() {
       this.updateTransaction();
     }
   },
   mounted() {
     if (this.modelValue) {
-      const { to = '', abi = '', value = '0', data } = this.modelValue;
+      const { to = '', abi = '', value = '0', injectVotes = [], data } = this.modelValue;
       this.to = to;
+      this.parameterInjectVotes = injectVotes;
 
       if (this.config.preview) {
         const transactionDecoder = new InterfaceDecoder(abi);
         this.selectedMethod = transactionDecoder.getMethodFragment(data);
         this.parameters = transactionDecoder.decodeFunction(
-          data,
-          this.selectedMethod
+            data,
+            this.selectedMethod
         );
 
         this.methods = [this.selectedMethod];
         this.handleValueChange(value);
         this.handleABIChanged(
-          typeof abi === 'object' ? JSON.stringify(abi) : abi
+            typeof abi === 'object' ? JSON.stringify(abi) : abi
         );
       } else {
         setTimeout(() => this.updateTransaction(), 1000);
@@ -110,20 +118,21 @@ export default {
       try {
         if (isBigNumberish(this.value) && isAddress(this.to)) {
           const data = getContractTransactionData(
-            this.abi,
-            this.selectedMethod,
-            this.parameters
+              this.abi,
+              this.selectedMethod,
+              this.parameters
           );
 
           const transaction = contractInteractionToModuleTransaction(
-            {
-              data,
-              to: this.to,
-              value: this.value,
-              nonce: this.nonce,
-              method: this.selectedMethod
-            },
-            this.config.multiSendAddress
+              {
+                data,
+                injectVotes: this.parameterInjectVotes,
+                to: this.to,
+                value: this.value,
+                nonce: this.nonce,
+                method: this.selectedMethod
+              },
+              this.config.multiSendAddress
           );
 
           if (this.plugin.validateTransaction(transaction)) {
@@ -174,6 +183,10 @@ export default {
     handleParameterChanged(index, value) {
       this.parameters[index] = value;
       this.updateTransaction();
+    },
+    handleParameterInjectVotesChanged(index, value) {
+      this.parameterInjectVotes[index] = value;
+      this.updateTransaction();
     }
   }
 };
@@ -182,38 +195,38 @@ export default {
 <template>
   <div class="space-y-2">
     <SafeSnapInputAddress
-      v-model="to"
-      :disabled="config.preview"
-      :input-props="{
+        v-model="to"
+        :disabled="config.preview"
+        :input-props="{
         required: true
       }"
-      :label="$t('safeSnap.to')"
-      @validAddress="handleAddressChanged()"
+        :label="$t('safeSnap.to')"
+        @validAddress="handleAddressChanged()"
     />
 
     <UiInput
-      :disabled="config.preview"
-      :error="!validValue && $t('safeSnap.invalidValue')"
-      :model-value="value"
-      @update:modelValue="handleValueChange($event)"
+        :disabled="config.preview"
+        :error="!validValue && $t('safeSnap.invalidValue')"
+        :model-value="value"
+        @update:modelValue="handleValueChange($event)"
     >
       <template #label>{{ $t('safeSnap.value') }}</template>
     </UiInput>
 
     <UiInput
-      :disabled="config.preview"
-      :error="!validAbi && $t('safeSnap.invalidAbi')"
-      :model-value="abi"
-      @update:modelValue="handleABIChanged($event)"
+        :disabled="config.preview"
+        :error="!validAbi && $t('safeSnap.invalidAbi')"
+        :model-value="abi"
+        @update:modelValue="handleABIChanged($event)"
     >
       <template #label>ABI</template>
     </UiInput>
 
     <div v-if="methods.length">
       <UiSelect
-        v-model="methodIndex"
-        :disabled="config.preview"
-        @change="handleMethodChanged()"
+          v-model="methodIndex"
+          :disabled="config.preview"
+          @change="handleMethodChanged()"
       >
         <template #label>function</template>
         <option v-for="(method, i) in methods" :key="i" :value="i">
@@ -225,12 +238,14 @@ export default {
         <div class="divider"></div>
 
         <SafeSnapInputMethodParameter
-          v-for="(input, index) in selectedMethod.inputs"
-          :key="input.name"
-          :disabled="config.preview"
-          :model-value="parameters[index]"
-          :parameter="input"
-          @update:modelValue="handleParameterChanged(index, $event)"
+            v-for="(input, index) in selectedMethod.inputs"
+            :key="input.name"
+            :disabled="config.preview"
+            :model-value="parameters[index]"
+            :model-inject-vote="parameterInjectVotes[index]"
+            :parameter="input"
+            @update:modelValue="handleParameterChanged(index, $event)"
+            @update:modelInjectVote="handleParameterInjectVotesChanged(index, $event)"
         />
       </div>
     </div>

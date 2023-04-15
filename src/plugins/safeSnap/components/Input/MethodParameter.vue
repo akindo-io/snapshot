@@ -6,7 +6,7 @@ import SafeSnapInputArrayType from './ArrayType.vue';
 
 export default {
   components: { SafeSnapInputAddress, SafeSnapInputArrayType },
-  props: ['modelValue', 'disabled', 'parameter'],
+  props: ['modelValue', 'disabled', 'parameter', 'modelInjectVote'],
   emits: ['update:modelValue', 'isValid'],
   data() {
     const placeholder = this.parameter.name
@@ -19,7 +19,8 @@ export default {
     return {
       placeholder,
       value,
-      dirty: false
+      dirty: false,
+      injectVote: false
     };
   },
   computed: {
@@ -34,15 +35,22 @@ export default {
   },
   mounted() {
     if (this.modelValue) this.value = this.modelValue;
+    if(this.modelInjectVote) this.injectVote = this.modelInjectVote;
   },
   created() {
     if (this.modelValue) this.input = this.modelValue;
+    if (this.modelInjectVote) this.injectVote = this.modelInjectVote;
   },
   methods: {
     handleInput(value) {
       this.value = value;
       this.dirty = true;
       this.$emit('update:modelValue', value);
+      this.$emit('isValid', this.isValid);
+    },
+    handleInvectVote(value) {
+      this.value = value;
+      this.$emit('update:modelInjectVote', value);
       this.$emit('isValid', this.isValid);
     },
     isArrayType() {
@@ -53,6 +61,7 @@ export default {
 </script>
 
 <template>
+  <div class="mb-3">
   <UiSelect
     v-if="parameter.type === 'bool'"
     :disabled="disabled"
@@ -78,8 +87,10 @@ export default {
     v-else-if="isArrayType()"
     :disabled="disabled"
     :model-value="value"
+    :model-inject-vote="injectVote"
     :parameter="parameter"
     @update:modelValue="handleInput($event)"
+    @update:modelInjectVote="handleInvectVote($event)"
   />
   <!-- Text input -->
   <UiInput
@@ -91,4 +102,5 @@ export default {
   >
     <template #label>{{ placeholder }}</template>
   </UiInput>
+  </div>
 </template>

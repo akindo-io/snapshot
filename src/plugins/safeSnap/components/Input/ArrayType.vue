@@ -32,6 +32,10 @@ const getPlaceholder = (name, type) => {
   return 'E.g.: ["first value", "second value", "third value"]';
 };
 
+const getInjectableVotes = (type) => {
+  return isUint(type);
+}
+
 function getLabel(parameter) {
   let type = parameter.type;
   if (parameter.baseType === 'tuple') {
@@ -43,20 +47,27 @@ function getLabel(parameter) {
 }
 
 export default {
-  props: ['parameter', 'disabled'],
-  emits: [],
+  props: ['parameter', 'disabled', 'modelValue', 'modelInjectVote'],
+  emits: ['update:modelValue', 'update:modelInjectVote'],
   data() {
     const label = getLabel(this.parameter);
     const placeholder = getPlaceholder(
       this.parameter.name,
       this.parameter.type
     );
+    const injectableVotes = getInjectableVotes(this.parameter.type);
     return {
       input: '',
       dirty: false,
       placeholder,
-      label
+      label,
+      injectableVotes,
+      injectVote: false
     };
+  },
+  mounted() {
+    if (this.modelValue) this.input = this.modelValue;
+    if(this.modelInjectVote) this.injectVote = this.modelInjectVote;
   },
   computed: {
     isValid() {
@@ -66,8 +77,15 @@ export default {
   methods: {
     handleInput(value) {
       this.input = value;
-      this.dirty = true;
-    }
+      this.$emit('update:modelValue', this.input);
+    },
+    handleInjectVote(value) {
+      this.injectVote = value;
+      this.$emit('update:modelInjectVote', this.injectVote);
+      if (this.injectVote) {
+        this.$emit('update:modelValue', '[]');
+      }
+    },
   }
 };
 </script>
@@ -76,10 +94,16 @@ export default {
   <UiInput
     :disabled="disabled"
     :error="dirty && !isValid && `Invalid ${type}`"
-    :model-value="value"
+    :model-value="input"
     :placeholder="placeholder"
     @update:modelValue="handleInput($event)"
   >
-    <template #label>{{ label }}</template>
   </UiInput>
+  <InputSwitch
+      :is-disabled="disabled"
+      v-model="injectVote"
+      v-if="injectableVotes"
+      :text-right="'Inject voting results'"
+      @update:modelValue="handleInjectVote($event)"
+  />
 </template>

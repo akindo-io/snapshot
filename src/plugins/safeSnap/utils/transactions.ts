@@ -89,13 +89,14 @@ export function transferFundsToModuleTransaction({
 }
 
 export function contractInteractionToModuleTransaction(
-  { to, value, data, nonce, method },
+    { to, value, data, injectVotes, nonce, method },
   multiSendAddress: string
 ): CustomContractTransaction {
   const operation = to === multiSendAddress ? '1' : '0';
   return {
     to,
     data,
+    injectVotes,
     nonce,
     operation,
     type: 'contractInteraction',
